@@ -13,7 +13,15 @@ cursor.execute('''CREATE TABLE IF NOT EXISTS emergencies
     location TEXT, 
     priority TEXT,
     status TEXT)''')
-print('1. Add ambulance\n2. View ambulances\n3. Exit\n4. Update ambulance status\n5. Delete ambulance\n6. Add emergency\n7. View emergencies')
+cursor.execute('''CREATE TABLE IF NOT EXISTS traffic 
+    (id INTEGER PRIMARY KEY,
+    location TEXT,
+    traffic_level TEXT,
+    estimated_delay INTEGER)''')
+# cursor.execute('''Alter TABLE emergencies ADD COLUMN ambulance_id INTEGER''')
+# connection.commit()
+# print('add colomn ambulance_id to emergencies table')
+print('1. Add ambulance\n2. View ambulances\n3. Exit\n4. Update ambulance status\n5. Delete ambulance\n6. Add emergency\n7. View emergencies\n8. Assign ambulance to emergency\n9. Update emergency status\n10. Make ambulance available\n11. Add traffic information')
 while True:
     choice=input("Enter your choice: ")
     if choice=='1':
@@ -55,6 +63,25 @@ while True:
         emergencies=cursor.fetchall()
         for item in emergencies:
             print(f"ID: {item[0]} | Patient Name: {item[1]} | Location: {item[2]} | Priority: {item[3]} | Status: {item[4]}")
+    elif choice=='8':
+        emergency_id=int(input('Enter emergency ID to assign ambulance:'))
+        ambulance_id=int(input('Enter ambulance ID to assign:'))
+        cursor.execute('UPDATE emergencies SET ambulance_id=?, status=? WHERE id=?', (ambulance_id, 'Assigned', emergency_id))
+        cursor.execute('UPDATE ambulances SET status=? WHERE id=?', ('Busy', ambulance_id))
+        connection.commit()
+        print('Ambulance assigned successfully.')
+    elif choice=='9':
+        emergency_id=int(input('Enter emergency ID to update status:'))
+        new_status=input('Enter new status:')
+        cursor.execute('UPDATE emergencies SET status=? WHERE id=?', (new_status, emergency_id))
+        connection.commit()
+        print('Emergency status updated successfully.')
+    elif choice=='10':
+        ambulance_id=int(input('Enter ambulance ID to make available:'))
+        cursor.execute('UPDATE ambulances SET status=? WHERE id=?', ('Available', ambulance_id))
+        connection.commit()
+        print('Ambulance made available successfully.')
+    elif choice=='11':
     elif choice=='3':
             print("Exiting..")
             break
