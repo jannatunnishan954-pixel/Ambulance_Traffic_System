@@ -56,6 +56,6 @@ while True:
         for item in emergencies:
             print(f"ID: {item[0]} | Patient Name: {item[1]} | Location: {item[2]} | Priority: {item[3]} | Status: {item[4]}")
     elif choice=='3':
-            print("Exiting...")
+            print("Exiting..")
             break
 connection.close()
