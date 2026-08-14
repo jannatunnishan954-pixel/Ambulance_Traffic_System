@@ -66,10 +66,29 @@ while True:
     elif choice=='8':
         emergency_id=int(input('Enter emergency ID to assign ambulance:'))
         ambulance_id=int(input('Enter ambulance ID to assign:'))
-        cursor.execute('UPDATE emergencies SET ambulance_id=?, status=? WHERE id=?', (ambulance_id, 'Assigned', emergency_id))
-        cursor.execute('UPDATE ambulances SET status=? WHERE id=?', ('Busy', ambulance_id))
-        connection.commit()
-        print('Ambulance assigned successfully.')
+        cursor.execute('SELECT id from emergencies WHERE id=?', (emergency_id,))
+        emergency_record=cursor.fetchone()
+        if emergency_record is None:
+            print('emergency not found')
+            continue
+        cursor.execute('SELECT  status FROM emergencies WHERE id=?', (emergency_id,))
+        emergency_status=cursor.fetchone()
+        if emergency_status[0]=='Assigned':
+            print('emergency has an already ambulance assigned')
+            continue
+        cursor.execute('SELECT status FROM ambulances WHERE id=?', (ambulance_id,))
+        ambulance_status=cursor.fetchone()
+        if ambulance_status is None:
+            print('Ambulance not found.')
+            continue
+        elif ambulance_status[0]!='Available':
+            print('Ambulance is not available.')
+            continue
+        else:
+            cursor.execute('UPDATE emergencies SET ambulance_id=?, status=? WHERE id=?', (ambulance_id, 'Assigned', emergency_id))
+            cursor.execute('UPDATE ambulances SET status=? WHERE id=?', ('Busy', ambulance_id))
+            connection.commit()
+            print('Ambulance assigned successfully.')
     elif choice=='9':
         emergency_id=int(input('Enter emergency ID to update status:'))
         new_status=input('Enter new status:')
@@ -90,6 +109,10 @@ while True:
         connection.commit()
         print('Traffic information added successfully.')
     elif choice=='12':
+        cursor.execute('SELECT * FROM traffic')
+        traffic_info=cursor.fetchall()
+        for item in traffic_info:
+            print(f"ID: {item[0]} | Location: {item[1]} | Traffic Level: {item[2]} | Estimated Delay: {item[3]} minutes")
     elif choice=='3':
             print("Exiting..")
             break
