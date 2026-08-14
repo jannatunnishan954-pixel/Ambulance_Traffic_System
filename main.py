@@ -92,17 +92,29 @@ while True:
     elif choice=='9':
         emergency_id=int(input('Enter emergency ID to update status:'))
         new_status=input('Enter new status:')
+        cursor.execute('SELECT  ambulance_id FROM emergencies WHERE id=?', (emergency_id,))
+        emergency_ambulance_id=cursor.fetchone()
+        if new_status=='Completed':
+            cursor.execute('UPDATE ambulances SET status=? WHERE id=?',('Available', emergency_ambulance_id[0]))
         cursor.execute('UPDATE emergencies SET status=? WHERE id=?', (new_status, emergency_id))
         connection.commit()
         print('Emergency status updated successfully.')
     elif choice=='10':
         ambulance_id=int(input('Enter ambulance ID to make available:'))
+        cursor.execute('SELECT id FROM ambulances WHERE id=?',(ambulance_id,))
+        ambulance_record=cursor.fetchone()
+        if ambulance_record is None:
+            print('does not exist.')
+            continue
         cursor.execute('UPDATE ambulances SET status=? WHERE id=?', ('Available', ambulance_id))
         connection.commit()
         print('Ambulance made available successfully.')
     elif choice=='11':
         location=input('Enter traffic location:')
-        traffic_level=input('Enter traffic level (Low/Medium/High): ')
+        traffic_level=input('Enter traffic level (Low/Medium/High): ').lower()
+        if traffic_level not in ('low','medium' 'high'):
+            print('invalid traffic level')
+            continue
         estimated_delay=int(input('Enter estimated delay in minutes: '))
         new_traffic=(location, traffic_level, estimated_delay)
         cursor.execute('INSERT INTO traffic (location, traffic_level, estimated_delay) VALUES (?, ?, ?)', new_traffic)
