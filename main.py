@@ -21,7 +21,7 @@ cursor.execute('''CREATE TABLE IF NOT EXISTS traffic
 # cursor.execute('''Alter TABLE emergencies ADD COLUMN ambulance_id INTEGER''')
 # connection.commit()
 # print('add colomn ambulance_id to emergencies table')
-print('1. Add ambulance\n2. View ambulances\n3. Exit\n4. Update ambulance status\n5. Delete ambulance\n6. Add emergency\n7. View emergencies\n8. Assign ambulance to emergency\n9. Update emergency status\n10. Make ambulance available\n11. Add traffic information')
+print('1. Add ambulance\n2. View ambulances\n3. Exit\n4. Update ambulance status\n5. Delete ambulance\n6. Add emergency\n7. View emergencies\n8. Assign ambulance to emergency\n9. Update emergency status\n10. Make ambulance available\n11. Add traffic information\n12. View traffic information')
 while True:
     choice=input("Enter your choice: ")
     if choice=='1':
@@ -82,6 +82,14 @@ while True:
         connection.commit()
         print('Ambulance made available successfully.')
     elif choice=='11':
+        location=input('Enter traffic location:')
+        traffic_level=input('Enter traffic level (Low/Medium/High): ')
+        estimated_delay=int(input('Enter estimated delay in minutes: '))
+        new_traffic=(location, traffic_level, estimated_delay)
+        cursor.execute('INSERT INTO traffic (location, traffic_level, estimated_delay) VALUES (?, ?, ?)', new_traffic)
+        connection.commit()
+        print('Traffic information added successfully.')
+    elif choice=='12':
     elif choice=='3':
             print("Exiting..")
             break
