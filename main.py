@@ -115,7 +115,11 @@ while True:
         if traffic_level not in ('low','medium' 'high'):
             print('invalid traffic level')
             continue
-        estimated_delay=int(input('Enter estimated delay in minutes: '))
+        try:
+            estimated_delay=int(input('Enter estimated delay in minutes: '))
+        except ValueError:
+            print('please enter a number.')
+            continue
         new_traffic=(location, traffic_level, estimated_delay)
         cursor.execute('INSERT INTO traffic (location, traffic_level, estimated_delay) VALUES (?, ?, ?)', new_traffic)
         connection.commit()
