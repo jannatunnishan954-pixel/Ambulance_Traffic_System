@@ -21,7 +21,7 @@ cursor.execute('''CREATE TABLE IF NOT EXISTS traffic
 # cursor.execute('''Alter TABLE emergencies ADD COLUMN ambulance_id INTEGER''')
 # connection.commit()
 # print('add colomn ambulance_id to emergencies table')
-print('1. Add ambulance\n2. View ambulances\n3. Exit\n4. Update ambulance status\n5. Delete ambulance\n6. Add emergency\n7. View emergencies\n8. Assign ambulance to emergency\n9. Update emergency status\n10. Make ambulance available\n11. Add traffic information\n12. View traffic information')
+print('1. Add ambulance\n2. View ambulances\n3. Exit\n4. Update ambulance status\n5. Delete ambulance\n6. Add emergency\n7. View emergencies\n8. Assign ambulance to emergency\n9. Update emergency status\n10. Make ambulance available\n11. Add traffic information\n12. View traffic information\n13.find available ambulance\n14.Find best available ambulance\n15.assign best ambulance automatically')
 while True:
     choice=input("Enter your choice: ")
     if choice=='1':
@@ -112,7 +112,7 @@ while True:
     elif choice=='11':
         location=input('Enter traffic location:')
         traffic_level=input('Enter traffic level (Low/Medium/High): ').lower()
-        if traffic_level not in ('low','medium' 'high'):
+        if traffic_level not in ('low','medium','high'):
             print('invalid traffic level')
             continue
         try:
@@ -129,6 +129,66 @@ while True:
         traffic_info=cursor.fetchall()
         for item in traffic_info:
             print(f"ID: {item[0]} | Location: {item[1]} | Traffic Level: {item[2]} | Estimated Delay: {item[3]} minutes")
+    elif choice=='13':
+        cursor.execute('SELECT * FROM ambulances WHERE status=?', ('Available',))
+        available_ambulances=cursor.fetchall()
+        for item in available_ambulances:
+            print(f'ID:{item[0]} | Driver name: {item[1]} | Hospital: {item[2]} | Current Location: {item[3]} | Status: {item[4]}')
+    elif choice=='14':
+        cursor.execute('SELECT * FROM ambulances WHERE status=?', ('Available',))
+        available_ambulances=cursor.fetchall()
+        best_ambulance=None
+        lowest_delay=float('inf')
+        for ambulance in available_ambulances:
+            location=ambulance[3]
+            cursor.execute('SELECT estimated_delay FROM traffic WHERE location=? ORDER BY  estimated_delay ASC LIMIT 1', (location,))
+            traffic_delay=cursor.fetchone()
+            if traffic_delay is None:
+                continue
+            delay=traffic_delay[0]
+            if delay<lowest_delay:
+                lowest_delay=delay
+                best_ambulance=ambulance
+        if best_ambulance is None:
+            print('no available ambulance with traffic information found.')
+            continue
+        else:
+            print(f'best ambulance: {best_ambulance[0]} | driver: {best_ambulance[1]} | location: {best_ambulance[3]} | estimated delay: {lowest_delay}')
+    elif choice=='15':
+        emergency_id=int(input('enter emergency id to assign ambulance: '))
+        cursor.execute('SELECT * FROM emergencies WHERE id=?', (emergency_id,))
+        emergency=cursor.fetchone()
+        if emergency is None:
+            print('emergency not found.')
+            continue
+        if emergency[4].lower != 'pending':
+            print('emergency is not pending.')
+            continue
+        emergency_location=emergency[2]
+        cursor.execute('SELECT * FROM ambulances WHERE status=?', ('Available',))
+        available_ambulances=cursor.fetchall()
+        if not available_ambulances:
+            print('no available ambulances.')
+            continue
+        best_ambulance=None
+        lowest_delay=float('inf')
+        for ambulance in available_ambulances:
+            location=ambulance[3]
+            cursor.execute('SELECT estimated_delay FROM traffic WHERE location = ? ORDER BY estimated_delay ASC LIMIT 1', (location,))
+            traffic_delay=cursor.fetchone()
+            if traffic_delay is None:
+                continue
+            delay=traffic_delay[0]
+            if delay<lowest_delay:
+                lowest_delay=delay
+                best_ambulance=ambulance
+        if best_ambulance is None:
+            print('no available ambulance with traffic information found.')
+            continue
+        cursor.execute('UPDATE emergencies SET ambulance_id=?, status=?, WHERE id=?', (best_ambulance[0],'Assigned', emergency_id))
+        cursor.execute('UPDATE ambulances SET status=? WHERE id=?', ('busy', best_ambulance[0]))
+        connection.commit()
+        print('best ambulance assigned successfully.')
     elif choice=='3':
             print("Exiting..")
             break
