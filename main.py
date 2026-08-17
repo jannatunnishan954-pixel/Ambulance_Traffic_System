@@ -1,5 +1,6 @@
 import sqlite3
 connection = sqlite3.connect('ambulance.db')
+connection.execute("PRAGMA foreign_keys = ON")
 cursor=connection.cursor()
 cursor.execute('''CREATE TABLE IF NOT EXISTS ambulances 
     (id INTEGER PRIMARY KEY, 
@@ -44,7 +45,15 @@ while True:
         except ValueError:
             print('please enter a valid number.')
             continue
-        new_status=input("Enter new status: ")
+        cursor.execute('SELECT id FROM ambulances WHERE id=?', (ambulance_id,))
+        ambulance=cursor.fetchone()
+        if ambulance is None:
+            print('ambulance not found.')
+            continue
+        new_status=input("Enter new status (Available/Busy): ").capitalize()
+        if new_status not in ('Available', 'Busy'):
+            print('Invalid status. Please enter Available or Busy.')
+            continue
         cursor.execute("UPDATE ambulances SET status=? WHERE id=?", (new_status, ambulance_id))
         connection.commit()
         print('Ambulance status updated successfully.')
@@ -53,6 +62,19 @@ while True:
             ambulance_id=int(input("Enter ambulance ID to delete: "))
         except ValueError:
             print('please enter a valid number.')
+            continue
+        cursor.execute('SELECT status FROM ambulances WHERE id=?', (ambulance_id,))
+        ambulance_status=cursor.fetchone()
+        if ambulance_status is None:
+            print('ambulance not found.')
+            continue
+        if ambulance_status[0].lower()=='busy':
+            print('Cannot delete a busy ambulance.')
+            continue
+        cursor.execute('SELECT id FROM emergencies WHERE ambulance_id=? AND status=?', (ambulance_id, 'Assigned'))
+        assigned_emergencies=cursor.fetchall()
+        if assigned_emergencies:
+            print('Cannot delete an ambulance with assigned emergencies.')
             continue
         cursor.execute("DELETE FROM ambulances WHERE id=?", (ambulance_id,))
         connection.commit()
@@ -70,7 +92,7 @@ while True:
         cursor.execute("SELECT * FROM emergencies")
         emergencies=cursor.fetchall()
         for item in emergencies:
-            print(f"ID: {item[0]} | Patient Name: {item[1]} | Location: {item[2]} | Priority: {item[3]} | Status: {item[4]}")
+            print(f"ID: {item[0]} | Patient Name: {item[1]} | Location: {item[2]} | Priority: {item[3]} | Status: {item[4]} | Ambulance ID: {item[5]}")
     elif choice=='8':
         try:
             emergency_id=int(input('Enter emergency ID to assign ambulance:'))
@@ -89,8 +111,11 @@ while True:
             continue
         cursor.execute('SELECT  status FROM emergencies WHERE id=?', (emergency_id,))
         emergency_status=cursor.fetchone()
-        if emergency_status[0]=='Assigned':
-            print('emergency has an already ambulance assigned')
+        if emergency_status is None:
+            print('emergency not found.')
+            continue
+        if emergency_status[0]!='pending':
+            print('emergency is not pending.')
             continue
         cursor.execute('SELECT status FROM ambulances WHERE id=?', (ambulance_id,))
         ambulance_status=cursor.fetchone()
@@ -111,7 +136,24 @@ while True:
         except ValueError:
             print('please enter a valid emergency id number.')
             continue
-        new_status=input('Enter new status:')
+        new_status=input('Enter new status(Pending/Assigned/Completed):').capitalize()
+        if new_status not in ('Pending', 'Assigned', 'Completed'):
+            print('Invalid status. Please enter Pending, Assigned, or Completed.')
+            continue
+        cursor.execute('SELECT status FROM emergencies WHERE id=?', (emergency_id,))
+        emergency_status=cursor.fetchone()[0]
+        if new_status=='Completed' and emergency_status!='Assigned':
+            print('Only assigned emergencies can be marked as completed.')
+            continue
+        if new_status=='Assigned':
+            if emergency_status=='Completed':
+                print('Cannot assign an ambulance to a completed emergency.')
+                continue
+            cursor.execute('SELECT ambulance_id FROM emergencies WHERE id=?', (emergency_id,))
+            assigned_ambulance=cursor.fetchone()
+            if assigned_ambulance is None or assigned_ambulance[0] is None:
+                print('No ambulance assigned to this emergency. Please assign an ambulance first.')
+                continue
         cursor.execute('SELECT  ambulance_id FROM emergencies WHERE id=?', (emergency_id,))
         emergency_ambulance_id=cursor.fetchone()
         if emergency_ambulance_id is None:
@@ -129,24 +171,38 @@ while True:
         except ValueError:
             print('please enter a valid ambulance id number.')
             continue
-        cursor.execute('SELECT id FROM ambulances WHERE id=?',(ambulance_id,))
+        cursor.execute('SELECT id, status FROM ambulances WHERE id=?',(ambulance_id,))
         ambulance_record=cursor.fetchone()
         if ambulance_record is None:
             print('Ambulance not found.')
+            continue
+        if ambulance_record[1].lower()=='available':
+            print('Ambulance is already available.')
+            continue
+        cursor.execute('SELECT id FROM emergencies WHERE ambulance_id=? AND status=?', (ambulance_id, 'Assigned'))
+        assigned_emergency=cursor.fetchone()
+        if assigned_emergency is not None:
+            print('Ambulance is currently assigned to an emergency. Cannot make it available.')
             continue
         cursor.execute('UPDATE ambulances SET status=? WHERE id=?', ('Available', ambulance_id))
         connection.commit()
         print('Ambulance made available successfully.')
     elif choice=='11':
-        location=input('Enter traffic location:')
-        traffic_level=input('Enter traffic level (Low/Medium/High): ').lower()
-        if traffic_level not in ('low','medium','high'):
+        location=input('Enter traffic location:').strip()
+        if not location:
+            print('location cannot be empty.')
+            continue
+        traffic_level=input('Enter traffic level (Low/Medium/High): ').strip().capitalize()
+        if traffic_level not in ('Low','Medium','High'):
             print('invalid traffic level')
             continue
         try:
             estimated_delay=int(input('Enter estimated delay in minutes: '))
         except ValueError:
             print('please enter a number.')
+            continue
+        if estimated_delay<0:
+            print('estimated delay cannot be negative.')
             continue
         new_traffic=(location, traffic_level, estimated_delay)
         cursor.execute('INSERT INTO traffic (location, traffic_level, estimated_delay) VALUES (?, ?, ?)', new_traffic)
@@ -160,6 +216,9 @@ while True:
     elif choice=='13':
         cursor.execute('SELECT * FROM ambulances WHERE LOWER(status)=?', ('available',))
         available_ambulances=cursor.fetchall()
+        if not available_ambulances:
+            print('No available ambulances found.')
+            continue
         for item in available_ambulances:
             print(f'ID:{item[0]} | Driver name: {item[1]} | Hospital: {item[2]} | Current Location: {item[3]} | Status: {item[4]}')
     elif choice=='14':
@@ -169,7 +228,7 @@ while True:
         lowest_delay=float('inf')
         for ambulance in available_ambulances:
             location=ambulance[3]
-            cursor.execute('SELECT estimated_delay FROM traffic WHERE location=? ORDER BY  estimated_delay ASC LIMIT 1', (location,))
+            cursor.execute('SELECT estimated_delay FROM traffic' 'WHERE LOWER(location)=LOWER(?) ' 'ORDER BY  estimated_delay ASC LIMIT 1', (location,))
             traffic_delay=cursor.fetchone()
             if traffic_delay is None:
                 continue
@@ -209,7 +268,8 @@ while True:
             if location.lower() == emergency_location.lower():
                 best_ambulance=ambulance
                 lowest_delay=0
-            cursor.execute('SELECT estimated_delay FROM traffic WHERE location = ? ORDER BY estimated_delay ASC LIMIT 1', (location,))
+                break
+            cursor.execute('SELECT estimated_delay FROM traffic WHERE LOWER(location)=LOWER(?) ORDER BY estimated_delay ASC LIMIT 1', (location,))
             traffic_delay=cursor.fetchone()
             if traffic_delay is None:
                 continue
