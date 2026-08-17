@@ -1,0 +1,11 @@
+# Ambulance Traffic Management System
+# Requirements
+
+# Core Python (built-in, no external packages needed)
+# Python 3.7+
+# sqlite3 (included in Python standard library)
+
+# Development and Testing
+pytest>=7.0.0
+black>=22.0.0
+flake8>=4.0.0

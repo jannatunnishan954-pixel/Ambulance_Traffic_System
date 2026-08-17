@@ -1,13 +1,7 @@
 import sqlite3
-import sys
-
-try:
-    connection = sqlite3.connect('ambulance.db')
-    connection.execute("PRAGMA foreign_keys = ON")
-    cursor = connection.cursor()
-except sqlite3.Error as e:
-    print(f"Database connection error: {e}")
-    sys.exit(1)
+connection = sqlite3.connect('ambulance.db')
+connection.execute("PRAGMA foreign_keys = ON")
+cursor=connection.cursor()
 cursor.execute('''CREATE TABLE IF NOT EXISTS ambulances 
     (id INTEGER PRIMARY KEY, 
     driver_name TEXT, 
@@ -54,7 +48,7 @@ while True:
         cursor.execute('SELECT id FROM ambulances WHERE id=?', (ambulance_id,))
         ambulance=cursor.fetchone()
         if ambulance is None:
-            print('ambulance not found.')
+            print('ambulance not found')
             continue
         new_status=input("Enter new status (Available/Busy): ").capitalize()
         if new_status not in ('Available', 'Busy'):
@@ -236,12 +230,14 @@ while True:
             location=ambulance[3]
             cursor.execute('SELECT estimated_delay FROM traffic ' 'WHERE LOWER(location)=LOWER(?) ' 'ORDER BY  estimated_delay ASC LIMIT 1', (location,))
             traffic_delay=cursor.fetchone()
-            delay = traffic_delay[0] if traffic_delay else 0
+            if traffic_delay is None:
+                continue
+            delay=traffic_delay[0]
             if delay<lowest_delay:
                 lowest_delay=delay
                 best_ambulance=ambulance
         if best_ambulance is None:
-            print('no available ambulances found.')
+            print('no available ambulance with traffic information found.')
             continue
         else:
             print(f'best ambulance: {best_ambulance[0]} | driver: {best_ambulance[1]} | location: {best_ambulance[3]} | estimated delay: {lowest_delay}')
@@ -275,7 +271,9 @@ while True:
                 break
             cursor.execute('SELECT estimated_delay FROM traffic WHERE LOWER(location)=LOWER(?) ORDER BY estimated_delay ASC LIMIT 1', (location,))
             traffic_delay=cursor.fetchone()
-            delay = traffic_delay[0] if traffic_delay else 0
+            if traffic_delay is None:
+                continue
+            delay=traffic_delay[0]
             if delay<lowest_delay:
                 lowest_delay=delay
                 best_ambulance=ambulance
@@ -289,10 +287,4 @@ while True:
     elif choice=='3':
             print("Exiting..")
             break
-    else:
-        print("Invalid choice. Please enter a valid option (1-15).")
-
-try:
-    connection.close()
-except sqlite3.Error as e:
-    print(f"Error closing database: {e}")
+connection.close()
