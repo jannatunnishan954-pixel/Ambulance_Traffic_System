@@ -18,10 +18,7 @@ cursor.execute('''CREATE TABLE IF NOT EXISTS traffic
     location TEXT,
     traffic_level TEXT,
     estimated_delay INTEGER)''')
-# cursor.execute('''Alter TABLE emergencies ADD COLUMN ambulance_id INTEGER''')
-# connection.commit()
-# print('add colomn ambulance_id to emergencies table')
-print('1. Add ambulance\n2. View ambulances\n3. Exit\n4. Update ambulance status\n5. Delete ambulance\n6. Add emergency\n7. View emergencies\n8. Assign ambulance to emergency\n9. Update emergency status\n10. Make ambulance available\n11. Add traffic information\n12. View traffic information\n13.find available ambulance\n14.Find best available ambulance\n15.assign best ambulance automatically')
+print('1. Add ambulance\n2. View ambulances\n3. Exit\n4. Update ambulance status\n5. Delete ambulance\n6. Add emergency\n7. View emergencies\n8. Assign ambulance to emergency\n9. Update emergency status\n10. Make ambulance available\n11. Add traffic information\n12. View traffic information\n13.Find available ambulance\n14.Find best available ambulance\n15.Assign best ambulance automatically')
 while True:
     choice=input("Enter your choice: ")
     if choice=='1':
@@ -33,19 +30,28 @@ while True:
         
         cursor.execute('''INSERT INTO ambulances (driver_name, hospital, current_location, status) VALUES (?, ?, ?, ?)''', new_ambulance)
         connection.commit()
+        print('ambulance added successfully.')
     elif choice=='2':
         cursor.execute("SELECT * FROM ambulances")
         ambulances=cursor.fetchall()
         for item in ambulances:
             print(f"ID: {item[0]} | Driver Name: {item[1]} | Hospital: {item[2]} | Current Location: {item[3]} | Status: {item[4]}")
     elif choice=='4':
-        ambulance_id=int(input("Enter ambulance ID to update: "))
+        try:
+            ambulance_id=int(input("Enter ambulance ID to update: "))
+        except ValueError:
+            print('please enter a valid number.')
+            continue
         new_status=input("Enter new status: ")
         cursor.execute("UPDATE ambulances SET status=? WHERE id=?", (new_status, ambulance_id))
         connection.commit()
         print('Ambulance status updated successfully.')
     elif choice=='5':
-        ambulance_id=int(input("Enter ambulance ID to delete: "))
+        try:
+            ambulance_id=int(input("Enter ambulance ID to delete: "))
+        except ValueError:
+            print('please enter a valid number.')
+            continue
         cursor.execute("DELETE FROM ambulances WHERE id=?", (ambulance_id,))
         connection.commit()
         print('Ambulance deleted successfully.')
@@ -64,8 +70,16 @@ while True:
         for item in emergencies:
             print(f"ID: {item[0]} | Patient Name: {item[1]} | Location: {item[2]} | Priority: {item[3]} | Status: {item[4]}")
     elif choice=='8':
-        emergency_id=int(input('Enter emergency ID to assign ambulance:'))
-        ambulance_id=int(input('Enter ambulance ID to assign:'))
+        try:
+            emergency_id=int(input('Enter emergency ID to assign ambulance:'))
+        except ValueError:
+            print('please enter a valid emergency id number.')
+            continue
+        try:
+            ambulance_id=int(input('Enter ambulance ID to assign:'))
+        except ValueError:
+            print('please enter a valid ambulance id number.')
+            continue
         cursor.execute('SELECT id from emergencies WHERE id=?', (emergency_id,))
         emergency_record=cursor.fetchone()
         if emergency_record is None:
@@ -90,17 +104,25 @@ while True:
             connection.commit()
             print('Ambulance assigned successfully.')
     elif choice=='9':
-        emergency_id=int(input('Enter emergency ID to update status:'))
+        try:
+            emergency_id=int(input('Enter emergency ID to update status:'))
+        except ValueError:
+            print('please enter a valid emergency id number.')
+            continue
         new_status=input('Enter new status:')
         cursor.execute('SELECT  ambulance_id FROM emergencies WHERE id=?', (emergency_id,))
         emergency_ambulance_id=cursor.fetchone()
-        if new_status=='Completed':
+        if new_status.lower()=='completed':
             cursor.execute('UPDATE ambulances SET status=? WHERE id=?',('Available', emergency_ambulance_id[0]))
         cursor.execute('UPDATE emergencies SET status=? WHERE id=?', (new_status, emergency_id))
         connection.commit()
         print('Emergency status updated successfully.')
     elif choice=='10':
-        ambulance_id=int(input('Enter ambulance ID to make available:'))
+        try:
+            ambulance_id=int(input('Enter ambulance ID to make available:'))
+        except ValueError:
+            print('please enter a valid ambulance id number.')
+            continue
         cursor.execute('SELECT id FROM ambulances WHERE id=?',(ambulance_id,))
         ambulance_record=cursor.fetchone()
         if ambulance_record is None:
@@ -128,14 +150,14 @@ while True:
         cursor.execute('SELECT * FROM traffic')
         traffic_info=cursor.fetchall()
         for item in traffic_info:
-            print(f"ID: {item[0]} | Location: {item[1]} | Traffic Level: {item[2]} | Estimated Delay: {item[3]} minutes")
+            print(f"ID: {item[0]} | Location: {item[1]} | Traffic Level: {item[2].capitalize()} | Estimated Delay: {item[3]} minutes")
     elif choice=='13':
-        cursor.execute('SELECT * FROM ambulances WHERE status=?', ('Available',))
+        cursor.execute('SELECT * FROM ambulances WHERE LOWER(status)=?', ('available',))
         available_ambulances=cursor.fetchall()
         for item in available_ambulances:
             print(f'ID:{item[0]} | Driver name: {item[1]} | Hospital: {item[2]} | Current Location: {item[3]} | Status: {item[4]}')
     elif choice=='14':
-        cursor.execute('SELECT * FROM ambulances WHERE status=?', ('Available',))
+        cursor.execute('SELECT * FROM ambulances WHERE LOWER(status)=?', ('available',))
         available_ambulances=cursor.fetchall()
         best_ambulance=None
         lowest_delay=float('inf')
@@ -155,17 +177,21 @@ while True:
         else:
             print(f'best ambulance: {best_ambulance[0]} | driver: {best_ambulance[1]} | location: {best_ambulance[3]} | estimated delay: {lowest_delay}')
     elif choice=='15':
-        emergency_id=int(input('enter emergency id to assign ambulance: '))
+        try:
+            emergency_id=int(input('enter emergency id to assign ambulance: '))
+        except ValueError:
+            print('please enter a valid emergency id number.')
+            continue
         cursor.execute('SELECT * FROM emergencies WHERE id=?', (emergency_id,))
         emergency=cursor.fetchone()
         if emergency is None:
             print('emergency not found.')
             continue
-        if emergency[4].lower != 'pending':
+        if emergency[4].lower() != 'pending':
             print('emergency is not pending.')
             continue
         emergency_location=emergency[2]
-        cursor.execute('SELECT * FROM ambulances WHERE status=?', ('Available',))
+        cursor.execute('SELECT * FROM ambulances WHERE LOWER(status)=?', ('available',))
         available_ambulances=cursor.fetchall()
         if not available_ambulances:
             print('no available ambulances.')
@@ -174,6 +200,9 @@ while True:
         lowest_delay=float('inf')
         for ambulance in available_ambulances:
             location=ambulance[3]
+            if location.lower() == emergency_location.lower():
+                best_ambulance=ambulance
+                lowest_delay=0
             cursor.execute('SELECT estimated_delay FROM traffic WHERE location = ? ORDER BY estimated_delay ASC LIMIT 1', (location,))
             traffic_delay=cursor.fetchone()
             if traffic_delay is None:
@@ -185,10 +214,10 @@ while True:
         if best_ambulance is None:
             print('no available ambulance with traffic information found.')
             continue
-        cursor.execute('UPDATE emergencies SET ambulance_id=?, status=?, WHERE id=?', (best_ambulance[0],'Assigned', emergency_id))
+        cursor.execute('UPDATE emergencies SET ambulance_id=?, status=? WHERE id=?', (best_ambulance[0],'Assigned', emergency_id))
         cursor.execute('UPDATE ambulances SET status=? WHERE id=?', ('busy', best_ambulance[0]))
         connection.commit()
-        print('best ambulance assigned successfully.')
+        print(f'Best ambulance assigned successfully. Estimated delay: {lowest_delay} minutes.')
     elif choice=='3':
             print("Exiting..")
             break
