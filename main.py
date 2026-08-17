@@ -12,7 +12,9 @@ cursor.execute('''CREATE TABLE IF NOT EXISTS emergencies
     patient_name TEXT, 
     location TEXT, 
     priority TEXT,
-    status TEXT)''')
+    status TEXT,
+    ambulance_id INTEGER,
+    FOREIGN KEY (ambulance_id) REFERENCES ambulances(id))''')
 cursor.execute('''CREATE TABLE IF NOT EXISTS traffic 
     (id INTEGER PRIMARY KEY,
     location TEXT,
@@ -215,7 +217,7 @@ while True:
             print('no available ambulance with traffic information found.')
             continue
         cursor.execute('UPDATE emergencies SET ambulance_id=?, status=? WHERE id=?', (best_ambulance[0],'Assigned', emergency_id))
-        cursor.execute('UPDATE ambulances SET status=? WHERE id=?', ('busy', best_ambulance[0]))
+        cursor.execute('UPDATE ambulances SET status=? WHERE id=?', ('Busy', best_ambulance[0]))
         connection.commit()
         print(f'Best ambulance assigned successfully. Estimated delay: {lowest_delay} minutes.')
     elif choice=='3':
