@@ -114,7 +114,7 @@ while True:
         if emergency_status is None:
             print('emergency not found.')
             continue
-        if emergency_status[0]!='pending':
+        if emergency_status[0].lower()!='pending':
             print('emergency is not pending.')
             continue
         cursor.execute('SELECT status FROM ambulances WHERE id=?', (ambulance_id,))
@@ -228,7 +228,7 @@ while True:
         lowest_delay=float('inf')
         for ambulance in available_ambulances:
             location=ambulance[3]
-            cursor.execute('SELECT estimated_delay FROM traffic' 'WHERE LOWER(location)=LOWER(?) ' 'ORDER BY  estimated_delay ASC LIMIT 1', (location,))
+            cursor.execute('SELECT estimated_delay FROM traffic ' 'WHERE LOWER(location)=LOWER(?) ' 'ORDER BY  estimated_delay ASC LIMIT 1', (location,))
             traffic_delay=cursor.fetchone()
             if traffic_delay is None:
                 continue
