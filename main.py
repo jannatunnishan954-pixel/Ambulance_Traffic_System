@@ -114,8 +114,12 @@ while True:
         new_status=input('Enter new status:')
         cursor.execute('SELECT  ambulance_id FROM emergencies WHERE id=?', (emergency_id,))
         emergency_ambulance_id=cursor.fetchone()
+        if emergency_ambulance_id is None:
+            print('emergency not found.')
+            continue
         if new_status.lower()=='completed':
-            cursor.execute('UPDATE ambulances SET status=? WHERE id=?',('Available', emergency_ambulance_id[0]))
+            if emergency_ambulance_id[0] is not None:
+                cursor.execute('UPDATE ambulances SET status=? WHERE id=?',('Available', emergency_ambulance_id[0]))
         cursor.execute('UPDATE emergencies SET status=? WHERE id=?', (new_status, emergency_id))
         connection.commit()
         print('Emergency status updated successfully.')
@@ -128,7 +132,7 @@ while True:
         cursor.execute('SELECT id FROM ambulances WHERE id=?',(ambulance_id,))
         ambulance_record=cursor.fetchone()
         if ambulance_record is None:
-            print('does not exist.')
+            print('Ambulance not found.')
             continue
         cursor.execute('UPDATE ambulances SET status=? WHERE id=?', ('Available', ambulance_id))
         connection.commit()
